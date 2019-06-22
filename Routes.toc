@@ -1,4 +1,4 @@
-## Interface: 80100
+﻿## Interface: 80100
 ## Title: Routes
 ## Notes: Routes on your worldmap and minimap!
 ## Notes-frFR: Routes sur votre carte du monde et minicarte !
@@ -43,6 +43,8 @@ Locales\Locale-zhTW.lua
 Routes.lua
 Routes.xml
 TSP.lua
+RoutesManager.lua
+RoutesManagerScrollFrame.lua
 
 # Routes Module files
 Modules\AutoShow.lua

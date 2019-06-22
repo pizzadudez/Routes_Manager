@@ -175,7 +175,7 @@ end
 
 Routes.LZName = setmetatable({}, { __index = function() return 0 end})
 for uiMapID, data in pairs(Routes.Dragons.mapData) do
-	if (data.mapType == Enum.UIMapType.Zone or data.mapType == Enum.UIMapType.Continent) and data.name then
+	if (data.mapType == Enum.UIMapType.Zone or data.mapType == Enum.UIMapType.Continent) and data.name and Routes.LZName[GetZoneName(uiMapID)] == 0 then
 		Routes.LZName[GetZoneName(uiMapID)] = uiMapID
 	end
 end
@@ -881,6 +881,11 @@ function Routes:OnInitialize()
 		self:RegisterChatCommand("routes", f)
 	end
 
+	-- slashcmd to enable RoutesManager
+	self:RegisterChatCommand("routesm", function()
+		self:EnableModule('RoutesManager')
+	end)
+
 	-- Upgrade old storage format (which was dependant on LibBabble-Zone-3.0
 	-- to the new format that doesn't require it
 	-- Also delete any invalid zones
@@ -951,7 +956,7 @@ timerFrame:SetScript("OnUpdate", function(self, elapsed)
 	if self.elapsed > 0.025 or self.force then -- throttle to a max of 40 redraws per sec
 		self.elapsed = 0                       -- kinda unnecessary since at default 1 yard refresh, its limited to 36 redraws/sec
 		Routes:DrawMinimapLines(self.force)    -- only need 25 redraws/sec to perceive smooth motion anyway
-		self.force = nil
+		--self.force = nil
 	end
 end)
 
@@ -1127,6 +1132,8 @@ function Routes:OnEnable()
 			plugin_table.AddCallbacks()
 		end
 	end
+	-- temp for debugging
+	self:EnableModule('RoutesManager')
 end
 
 function Routes:OnDisable()
