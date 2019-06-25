@@ -20,44 +20,53 @@ end
 --[[ Event Handlers ]]--
 function RoutesManager:ZONE_CHANGED_NEW_AREA()
     self.mapID = C_Map.GetBestMapForUnit('player')
-    -- zone changed, redraw clusterBtns
+    
+    -- this event fires before loading in aswell
     if self.window then
+        -- zone changed, redraw clusterBtns and infoFrame elements
+        self.currCluster = nil
+        self.currClusterName = nil
         self:DrawClusterButtons()
+        -- infoFrame
+        self:UpdateInfoFrame(GetZoneText(), '', '', true)
     end
 end
 
 
 -- [[ UI Drawing/Updating ]]--
 function RoutesManager:DrawManagerFrame()
-    local window = StdUi:PanelWithTitle(UIParent, 190, 310, 'Routes Manager', 100, 16)
+    local window = StdUi:PanelWithTitle(UIParent, 240, 310, 'Routes Manager', 100, 16)
     window:SetPoint('TOPLEFT', UIParent, 'CENTER', 350, 200)
     self.window = window
 
+    self:DrawInfoFrame()
+    self:DrawClusterScrollFrame()
+
     -- addNode Button
-    local addNodeBtn = StdUi:Button(window, 60, 30, 'Add Position')
-    addNodeBtn:SetPoint('TOPLEFT', window, 'TOPLEFT', 14, -38)
+    local addNodeBtn = StdUi:Button(window, 60, 30, 'Add Node')
+    addNodeBtn:SetPoint('TOPLEFT', window.infoFrame, 'TOPLEFT', 0, -68)
     addNodeBtn:SetScript('OnClick', function()
         if self.currCluster then
             self.currCluster.route = self.currCluster.route or {}
             local nodeList = self.currCluster.route
             nodeList[#nodeList + 1] = self:PlayerPositionCoords()
             self:SortNodes(self.currCluster)
+            self:UpdateInfoFrame(nil, nil, #nodeList, true)
         end
     end)
-
     -- removeNode Button
     local removeNodeBtn = StdUi:Button(window, 60, 30, 'Remove Node')
-    removeNodeBtn:SetPoint('TOPLEFT', addNodeBtn, 'BOTTOMLEFT', 0, -10)
+    removeNodeBtn:SetPoint('TOPLEFT', addNodeBtn, 'BOTTOMLEFT', 0, -6)
     removeNodeBtn:SetScript('OnClick', function()
         if self.currCluster then
             self:RemoveClosestNode(self.currCluster)
             self:SortNodes(self.currCluster)
+            self:UpdateInfoFrame(nil, nil, #nodeList, true)
         end
     end)
-
     -- addCluster nameBox
     local addClusterNameBox = StdUi:EditBox(window, 60, 20)
-    addClusterNameBox:SetPoint('TOPLEFT', removeNodeBtn, 'BOTTOMLEFT', 0, -20)
+    addClusterNameBox:SetPoint('TOPLEFT', window.infoFrame, 'BOTTOMLEFT', 0, -12)
     this = self
     addClusterNameBox.OnValueChanged = function(self)
         this.newClusterName = (self:GetValue())
@@ -66,10 +75,9 @@ function RoutesManager:DrawManagerFrame()
         end
         self:ClearFocus()
     end
-
     -- addCluster Button
     local addClusterBtn = StdUi:Button(window, 60, 30, 'Add Cluster')
-    addClusterBtn:SetPoint('TOPLEFT', addClusterNameBox, 'BOTTOMLEFT', 0, -8)
+    addClusterBtn:SetPoint('TOPLEFT', addClusterNameBox, 'BOTTOMLEFT', 0, -6)
     addClusterBtn:SetScript('OnClick', function()
         if self.newClusterName then
             local newCluster = {
@@ -86,10 +94,9 @@ function RoutesManager:DrawManagerFrame()
         end
         addClusterNameBox:SetValue('') -- sets self.newClusterName to nil
     end)
-
     -- renameCluster Button
     local renameClusterBtn = StdUi:Button(window, 60, 30, 'Rename Cluster')
-    renameClusterBtn:SetPoint('TOPLEFT', addClusterBtn, 'BOTTOMLEFT', 0, -8)
+    renameClusterBtn:SetPoint('LEFT', addClusterBtn, 'RIGHT', 6, 0)
     renameClusterBtn:SetScript('OnClick', function()
         if self.currCluster then
             local newCluster = {}
@@ -101,35 +108,34 @@ function RoutesManager:DrawManagerFrame()
             self.removedClusters = self.removedClusters or {}
             tinsert(self.removedClusters, self.currClusterName)
             table.wipe(self.currCluster)
-            self.currCluster = nil
+            self.currCluster = newCluster
             self:DrawClusterButtons()
+            self:UpdateInfoFrame(nil, self.newClusterName, #self.currCluster.route, true)
         end
         addClusterNameBox:SetValue('')
     end)
-
-    -- removeCluster Button
-    local removeClusterBtn = StdUi:Button(window, 60, 26, 'Remove Cluster')
-    removeClusterBtn:SetPoint('BOTTOMLEFT', window, 'BOTTOMLEFT', 14, 10)
+    -- removeCluster Button (+ shiftKey)
+    local removeClusterBtn = StdUi:Button(window, 80, 24, 'Remove Cluster')
+    removeClusterBtn:SetPoint('TOPLEFT', removeNodeBtn, 'BOTTOMLEFT', 0, -6)
     removeClusterBtn:SetScript('OnClick', function()
-        if self.currCluster then
+        if self.currCluster and IsShiftKeyDown() then
             self.removedClusters = self.removedClusters or {}
             tinsert(self.removedClusters, self.currClusterName)
             table.wipe(self.currCluster)
             self.currCluster = nil
             self:DrawClusterButtons()
+            self:UpdateInfoFrame(nil, '', '', true)
         end
     end)
-
-    self:DrawInfoFrame()
-    self:DrawClusterScrollFrame()
 end
+
 
 -- Cluster Scroll Frame
 function RoutesManager:DrawClusterScrollFrame()
     local clusterFrame = {}
     clusterFrame.panel, clusterFrame.scrollFrame, clusterFrame.clusterFrame, clusterFrame.scrollBar =
         self:ScrollFrame(self.window, 56, 250)
-    clusterFrame.panel:SetPoint('TOPRIGHT', self.window, 'TOPRIGHT', -10, -38)
+    clusterFrame.panel:SetPoint('TOPRIGHT', self.window, 'TOPRIGHT', -10, -32)
     clusterFrame.panel:SetPoint('BOTTOMRIGHT', self.window, 'BOTTOMRIGHT', -10, 10)
     
     self.window.clusterFrame = clusterFrame
@@ -197,6 +203,7 @@ function RoutesManager:CreateClusterButton(clusterName)
             this.currCluster = this.db[this.mapID][this.currClusterName]
             this.currCluster.color = {255/255, 94/255, 255/255, 1}
             this:SortNodes(this.currCluster)
+            this:UpdateInfoFrame(nil, this.currClusterName, #this.currCluster.route, true)
         elseif button == 'RightButton' then
             if this.currCluster then
                 this.currCluster.color = this.currCluster.defaultColor or 
@@ -204,14 +211,96 @@ function RoutesManager:CreateClusterButton(clusterName)
             end
             this.currClusterName = nil
             this.currCluster = nil
+            this:UpdateInfoFrame(nil, '', '', true)
         end
     end)
     return btn
 end
 
---TODO
-function RoutesManager:DrawInfoFrame()
 
+function RoutesManager:DrawInfoFrame()
+    local window = self.window
+    local infoFrame = StdUi:Frame(window, 150, 200)
+    infoFrame:SetPoint('TOPLEFT', window, 'TOPLEFT', 10, -32)
+    window.infoFrame = infoFrame
+
+    -- zone name
+    local zoneNameTitle = StdUi:Label(infoFrame, 'Zone:', 16)
+    zoneNameTitle:SetPoint('TOPLEFT', infoFrame, 'TOPLEFT', 0, -6)
+    local zoneName = StdUi:Label(infoFrame, GetZoneText(), 16)
+    zoneName:SetPoint('LEFT', zoneNameTitle, 'RIGHT', 3, 0)
+    zoneName:SetTextColor(1, 1, 0.12, 1)
+    infoFrame.zoneName = zoneName
+    -- cluster name
+    local clusterNameTitle = StdUi:Label(infoFrame, 'Cluster:', 16)
+    clusterNameTitle:SetPoint('TOPLEFT', zoneNameTitle, 'BOTTOMLEFT', 0, -4)
+    local clusterName = StdUi:Label(infoFrame, '', 16)
+    clusterName:SetPoint('LEFT', clusterNameTitle, 'RIGHT', 3, 0)
+    clusterName:SetTextColor(1, 1, 0.12, 1)
+    infoFrame.clusterName = clusterName
+    -- node count
+    local nodeCountTitle = StdUi:Label(infoFrame, 'Nodes Count:', 16)
+    nodeCountTitle:SetPoint('TOPLEFT', clusterNameTitle, 'BOTTOMLEFT', 0, -4)
+    local nodeCount = StdUi:Label(infoFrame, '', 16)
+    nodeCount:SetPoint('Left', nodeCountTitle, 'RIGHT', 3, 0)
+    nodeCount:SetTextColor(1, 1, 0.12, 1)
+    infoFrame.nodeCount = nodeCount
+    -- node list
+    local nodeList = StdUi:Frame(infoFrame, 80, 150)
+    nodeList:SetPoint('TOPLEFT', nodeCount, 'BOTTOMLEFT', 0, 0)
+    infoFrame.nodeList = nodeList
+    self:DrawInfoFrameNodeList()
+end
+
+-- Usage: nil => no change, emptyString => set nothing, true (4th param) => redraw nodeList
+function RoutesManager:UpdateInfoFrame(zoneName, clusterName, nodeCount, nodeList)
+    local infoFrame = self.window.infoFrame
+
+    if zoneName then
+        infoFrame.zoneName:SetText(zoneName)
+    end
+    if clusterName then
+        infoFrame.clusterName:SetText(clusterName)
+    end
+    if nodeCount then
+        infoFrame.nodeCount:SetText(nodeCount)
+    end
+    if nodeList then
+        self:DrawInfoFrameNodeList()
+    end
+end
+
+function RoutesManager:DrawInfoFrameNodeList()
+    local nodeFrame = self.window.infoFrame.nodeList
+    local nodes = nodeFrame.nodes or {}
+    nodeFrame.nodes = nodes
+
+    -- no cluster selected => dont draw and hide all labels
+    if not self.currCluster then
+        for _, node in ipairs(nodes) do
+            node:Hide()
+        end
+        return 
+    end
+
+    for i, node in ipairs(self.currCluster.route) do
+        local label = nodes[i]
+        if not label then -- create if not exists
+            label = StdUi:Label(nodeFrame, '', 14)
+        end
+        label:Show()
+        label:SetText(node) -- update text
+        if i == 1 then
+            label:SetPoint('TOPLEFT', nodeFrame, 'TOPLEFT', 0, 0)
+        else
+            label:SetPoint('TOPLEFT', nodes[i-1], 'BOTTOMLEFT', 0, -2)
+        end
+        nodes[i] = label
+    end
+    -- hide excess node labels
+    for i = #self.currCluster.route + 1, #nodes do
+        nodes[i]:Hide()
+    end
 end
 
 
