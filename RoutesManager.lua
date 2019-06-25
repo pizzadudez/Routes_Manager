@@ -48,10 +48,9 @@ function RoutesManager:DrawManagerFrame()
     addNodeBtn:SetScript('OnClick', function()
         if self.currCluster then
             self.currCluster.route = self.currCluster.route or {}
-            local nodeList = self.currCluster.route
-            nodeList[#nodeList + 1] = self:PlayerPositionCoords()
+            self.currCluster.route[#self.currCluster.route + 1] = self:PlayerPositionCoords()
             self:SortNodes(self.currCluster)
-            self:UpdateInfoFrame(nil, nil, #nodeList, true)
+            self:UpdateInfoFrame(nil, nil, #self.currCluster.route, true)
         end
     end)
     -- removeNode Button
@@ -61,7 +60,7 @@ function RoutesManager:DrawManagerFrame()
         if self.currCluster then
             self:RemoveClosestNode(self.currCluster)
             self:SortNodes(self.currCluster)
-            self:UpdateInfoFrame(nil, nil, #nodeList, true)
+            self:UpdateInfoFrame(nil, nil, #self.currCluster.route, true)
         end
     end)
     -- addCluster nameBox
