@@ -1133,7 +1133,7 @@ function Routes:OnEnable()
 		end
 	end
 	-- temp for debugging
-	self:EnableModule('RoutesManager')
+	-- self:EnableModule('RoutesManager')
 end
 
 function Routes:OnDisable()
